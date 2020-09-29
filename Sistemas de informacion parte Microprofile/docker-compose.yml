@@ -1,0 +1,61 @@
+version: '3'
+
+networks:
+  network-back:
+    driver: bridge
+  network-front:
+    driver: bridge
+
+services:
+
+  oracle:
+    image: oracle/database:11.2.0.2-xe
+    
+    environment:
+      ORACLE_PWD: oracle
+    volumes:
+      - d:\docker-images-master/OracleDatabase/SingleInstance/dockerfiles/opt/oracle/11gR2XE/oradata:/u01/app/oracle/oradata
+      - d:\docker-images-master/OracleDatabase/SingleInstance/dockerfiles/opt/oracle/11gR2XE/scripts/setup:/u01/app/oracle/scripts/setup
+      - d:\docker-images-master/OracleDatabase/SingleInstance/dockerfiles/opt/oracle/11gR2XE/scripts/startup:/u01/app/oracle/scripts/startup
+    networks:
+      - network-back
+#    ports:
+#      - 1521:1521
+    shm_size: '2gb'
+
+  backenddakar:
+    build:
+      context: ./BackEndDakar
+      dockerfile: Dockerfile 
+    image: backend
+#    deploy:
+#      replicas: 2  
+    environment:
+      DATABASE_HOST: oracle
+      DATABASE_PORT: 1521
+      DATABASE_SID: xe
+      DATABASE_USER: username
+      DATABASE_PASSWORD: password
+    networks:
+      - network-back
+      - network-front
+#    ports:
+#      - 8080:8080
+    depends_on:
+      - oracle
+  frontenddakar:
+    build:
+      context: ./FrontEndDakar
+      dockerfile: Dockerfile
+    image: frontend
+    environment:
+      com.mycompany.frontenddakar.services.BackendService/mp-rest/uri: http://backenddakar:8080
+    networks:
+      - network-front
+    ports:
+      - 80:8080
+    depends_on:
+      - backenddakar
+      - oracle
+
+  
